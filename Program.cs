@@ -1,8 +1,8 @@
-var builder = WebApplication.CreateBuilder(args);
+ï»¿var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer(); // bu önemli!
+builder.Services.AddEndpointsApiExplorer(); // bu Ã¶nemli!
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
@@ -10,8 +10,8 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger(); // Swagger JSON dosyasýný üretir
-    app.UseSwaggerUI(); // Arayüzü sunar
+    app.UseSwagger(); // Swagger JSON dosyasÄ±nÄ± Ã¼retir
+    app.UseSwaggerUI(); // ArayÃ¼zÃ¼ sunar
 }
 
 app.UseHttpsRedirection();
