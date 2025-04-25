@@ -15,37 +15,13 @@ variables:
   BuildConfiguration: 'Release'
 
 steps:
-# Azure Key Vault'tan secret çek
-- task: AzureKeyVault@2
-  displayName: 'Fetch secrets from Azure Key Vault'
-  inputs:
-    azureSubscription: 'GameDeliveryPaaS-ServiceConnection'
-    KeyVaultName: 'GameDeliveryVault'
-    SecretsFilter: '*'
-    RunAsPreJob: false
 
-# Secret dosyası oluştur (Key Vault'tan alınan değeri kullanarak)
-- task: CmdLine@2
-  displayName: 'Create secret file'
-  inputs:
-    script: |
-      echo "Secret dosyası oluşturuluyor"
-      echo "$(SecretFromKeyVault)" > secret.txt
-  # Not: "SecretFromKeyVault" kısmını Key Vault'taki gerçek secret adınızla değiştirin
-
-# Dosyayı kopyala
-- task: CopyFiles@2
-  displayName: 'Copy secret file'
-  inputs:
-    Contents: 'secret.txt'
-    targetFolder: '$(Build.ArtifactStagingDirectory)'
-
-# .NET 8 yükle
+# .NET 9 yükle
 - task: UseDotNet@2
-  displayName: 'Install .NET SDK 8.x'
+  displayName: 'Install .NET SDK 9.x'
   inputs:
     packageType: 'sdk'
-    version: '8.x'
+    version: '9.x'
     installationPath: $(Agent.ToolsDirectory)/dotnet
 
 # Proje adını al
