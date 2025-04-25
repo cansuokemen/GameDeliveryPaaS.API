@@ -8,11 +8,11 @@ builder.Services.AddSwaggerGen();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger(); // Swagger JSON dosyasını üretir
-    app.UseSwaggerUI(); // Arayüzü sunar
-}
+
+
+app.UseSwagger(); // Swagger JSON dosyasını üretir
+app.UseSwaggerUI(); // Arayüzü sunar
+
 
 app.UseHttpsRedirection();
 
