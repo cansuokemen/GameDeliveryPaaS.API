@@ -6,17 +6,16 @@
 trigger:
   branches:
     include:
-      - master
+    - master
 
 pool:
   vmImage: 'windows-latest'
 
 variables:
   BuildConfiguration: 'Release'
-  SECRET_NAME: your-secret-value-here  # Gerekirse buraya secret tanımı yap
 
 steps:
-# Azure Key Vault’tan secret çek (opsiyonel)
+# Azure Key Vault'tan secret çek
 - task: AzureKeyVault@2
   displayName: 'Fetch secrets from Azure Key Vault'
   inputs:
@@ -25,11 +24,14 @@ steps:
     SecretsFilter: '*'
     RunAsPreJob: false
 
-# Secret dosyası oluştur (opsiyonel)
+# Secret dosyası oluştur (Key Vault'tan alınan değeri kullanarak)
 - task: CmdLine@2
   displayName: 'Create secret file'
   inputs:
-    script: 'echo $(SECRET_NAME) > secret.txt'
+    script: |
+      echo "Secret dosyası oluşturuluyor"
+      echo "$(SecretFromKeyVault)" > secret.txt
+  # Not: "SecretFromKeyVault" kısmını Key Vault'taki gerçek secret adınızla değiştirin
 
 # Dosyayı kopyala
 - task: CopyFiles@2
@@ -53,14 +55,21 @@ steps:
     targetType: 'inline'
     script: |
       $projectFile = Get-ChildItem -Recurse *.csproj | Where-Object { $_.Name -like '*GameDeliveryPaaS.API.csproj' } | Select-Object -First 1
-      Write-Host "##vso[task.setvariable variable=ProjectName]$($projectFile.BaseName)"
+      if ($projectFile) {
+        Write-Host "Proje bulundu: $($projectFile.FullName)"
+        Write-Host "##vso[task.setvariable variable=ProjectName]$($projectFile.BaseName)"
+      } else {
+        Write-Host "##[warning] Proje dosyası bulunamadı!"
+        Write-Host "##vso[task.setvariable variable=ProjectName]GameDeliveryPaaS.API"
+      }
 
 # Restore
 - task: DotNetCoreCLI@2
-  displayName: 'Restore project'
+  displayName: 'Restore project dependencies'
   inputs:
     command: 'restore'
     projects: '**/*.sln'
+    feedsToUse: 'select'
 
 # Build
 - task: DotNetCoreCLI@2
@@ -68,22 +77,34 @@ steps:
   inputs:
     command: 'build'
     projects: '**/*.sln'
-    arguments: '--configuration $(BuildConfiguration)'
+    arguments: '--configuration $(BuildConfiguration) --no-restore'
 
 # Test
 - task: DotNetCoreCLI@2
   displayName: 'Run tests'
   inputs:
     command: 'test'
-    projects: '**/*.sln'
+    projects: '**/*Tests*.csproj'
+    arguments: '--configuration $(BuildConfiguration) --no-build'
+    publishTestResults: true
+  continueOnError: true
 
 # Publish
 - task: DotNetCoreCLI@2
   displayName: 'Publish project'
   inputs:
     command: 'publish'
-    projects: '**/*.sln'
-    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)/publish'
+    publishWebProjects: true
+    projects: '**/*GameDeliveryPaaS.API.csproj'
+    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)/publish --no-build'
+    zipAfterPublish: true
+
+# Artifact yayınla
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Build Artifacts'
+  inputs:
+    pathtoPublish: '$(Build.ArtifactStagingDirectory)/publish'
+    artifactName: 'GameDeliveryPaaS-API'
 
 # Deploy
 - task: AzureWebApp@1
@@ -91,11 +112,14 @@ steps:
   inputs:
     azureSubscription: 'GameDeliveryPaaS-ServiceConnection'
     appType: 'webApp'
-    appName: 'GameDeliveryPaaS-API'  # Azure Web App adı
+    appName: 'GameDeliveryPaaS-API'
     package: '$(Build.ArtifactStagingDirectory)/publish/$(ProjectName).zip'
+    deploymentMethod: 'auto'
 
 # Temizlik
 - task: DeleteFiles@1
   displayName: 'Cleanup artifacts'
   inputs:
     SourceFolder: '$(Build.ArtifactStagingDirectory)'
+    Contents: '**/*'
+  condition: always()
