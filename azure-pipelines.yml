@@ -67,20 +67,11 @@ steps:
 
 # Publish
 - task: DotNetCoreCLI@2
-  displayName: 'Publish project'
+  displayName: Publish Project
   inputs:
     command: 'publish'
-    publishWebProjects: true
-    projects: '**/*GameDeliveryPaaS.API.csproj'
-    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)/publish --no-build'
-    zipAfterPublish: true
-
-# Artifact yayınla
-- task: PublishBuildArtifacts@1
-  displayName: 'Publish Build Artifacts'
-  inputs:
-    pathtoPublish: '$(Build.ArtifactStagingDirectory)/publish'
-    artifactName: 'GameDeliveryPaaS-API'
+    projects: '**/*.sln'
+    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)/publish'
 
 # Deploy
 - task: AzureWebApp@1
