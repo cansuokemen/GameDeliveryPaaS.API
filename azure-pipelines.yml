@@ -4,31 +4,98 @@
 # https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
 
 trigger:
-- master
+  branches:
+    include:
+      - master
 
 pool:
   vmImage: 'windows-latest'
 
 variables:
-  solution: '**/*.sln'
-  buildPlatform: 'Any CPU'
-  buildConfiguration: 'Release'
+  BuildConfiguration: 'Release'
+  SECRET_NAME: your-secret-value-here  # Gerekirse buraya secret tanımı yap
 
 steps:
-- task: NuGetToolInstaller@1
-
-- task: NuGetCommand@2
+# Azure Key Vault’tan secret çek (opsiyonel)
+- task: AzureKeyVault@2
+  displayName: 'Fetch secrets from Azure Key Vault'
   inputs:
-    restoreSolution: '$(solution)'
+    azureSubscription: 'GameDeliveryPaaS-ServiceConnection'
+    KeyVaultName: 'GameDeliveryVault'
+    SecretsFilter: '*'
+    RunAsPreJob: false
 
-- task: VSBuild@1
+# Secret dosyası oluştur (opsiyonel)
+- task: CmdLine@2
+  displayName: 'Create secret file'
   inputs:
-    solution: '$(solution)'
-    msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:DesktopBuildPackageLocation="$(build.artifactStagingDirectory)\WebApp.zip" /p:DeployIisAppPath="Default Web Site"'
-    platform: '$(buildPlatform)'
-    configuration: '$(buildConfiguration)'
+    script: 'echo $(SECRET_NAME) > secret.txt'
 
-- task: VSTest@2
+# Dosyayı kopyala
+- task: CopyFiles@2
+  displayName: 'Copy secret file'
   inputs:
-    platform: '$(buildPlatform)'
-    configuration: '$(buildConfiguration)'
+    Contents: 'secret.txt'
+    targetFolder: '$(Build.ArtifactStagingDirectory)'
+
+# .NET 8 yükle
+- task: UseDotNet@2
+  displayName: 'Install .NET SDK 8.x'
+  inputs:
+    packageType: 'sdk'
+    version: '8.x'
+    installationPath: $(Agent.ToolsDirectory)/dotnet
+
+# Proje adını al
+- task: PowerShell@2
+  displayName: 'Set project name variable'
+  inputs:
+    targetType: 'inline'
+    script: |
+      $projectFile = Get-ChildItem -Recurse *.csproj | Where-Object { $_.Name -like '*GameDeliveryPaaS.API.csproj' } | Select-Object -First 1
+      Write-Host "##vso[task.setvariable variable=ProjectName]$($projectFile.BaseName)"
+
+# Restore
+- task: DotNetCoreCLI@2
+  displayName: 'Restore project'
+  inputs:
+    command: 'restore'
+    projects: '**/*.sln'
+
+# Build
+- task: DotNetCoreCLI@2
+  displayName: 'Build project'
+  inputs:
+    command: 'build'
+    projects: '**/*.sln'
+    arguments: '--configuration $(BuildConfiguration)'
+
+# Test
+- task: DotNetCoreCLI@2
+  displayName: 'Run tests'
+  inputs:
+    command: 'test'
+    projects: '**/*.sln'
+
+# Publish
+- task: DotNetCoreCLI@2
+  displayName: 'Publish project'
+  inputs:
+    command: 'publish'
+    projects: '**/*.sln'
+    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)/publish'
+
+# Deploy
+- task: AzureWebApp@1
+  displayName: 'Deploy to Azure Web App'
+  inputs:
+    azureSubscription: 'GameDeliveryPaaS-ServiceConnection'
+    appType: 'webApp'
+    appName: 'GameDeliveryPaaS-API'  # Azure Web App adı
+    package: '$(Build.ArtifactStagingDirectory)/publish/$(ProjectName).zip'
+
+# Temizlik
+- task: DeleteFiles@1
+  displayName: 'Cleanup artifacts'
+  inputs:
+    SourceFolder: '$(Build.ArtifactStagingDirectory)'
