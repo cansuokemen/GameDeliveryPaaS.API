@@ -88,5 +88,15 @@ namespace GameDeliveryPaaS.API.Controllers
 
             return Ok("Comment added.");
         }
+        [HttpPost("{id}/ratings")]
+        public async Task<IActionResult> AddRating(string id, [FromBody] int rating)
+        {
+            var success = await _gameService.AddRatingAsync(id, rating);
+            if (!success)
+                return BadRequest("Invalid rating or game not found / feedback disabled.");
+
+            return Ok("Rating added.");
+        }
+
     }
 }

@@ -53,6 +53,20 @@ namespace GameDeliveryPaaS.API.Services
             );
             return result.ModifiedCount > 0;
         }
+        public async Task<bool> AddRatingAsync(string id, int rating)
+        {
+            if (rating < 1 || rating > 5)
+                return false;
 
+            var game = await _games.Find(g => g.Id == id && g.IsFeedbackEnabled).FirstOrDefaultAsync();
+            if (game == null)
+                return false;
+
+            game.Ratings.Add(rating);
+            game.AverageRating = game.Ratings.Average();
+
+            var result = await _games.ReplaceOneAsync(g => g.Id == id, game);
+            return result.ModifiedCount > 0;
+        }
     }
 }
