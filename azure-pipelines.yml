@@ -73,6 +73,15 @@ steps:
     projects: '**/*.sln'
     arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)/publish'
 
+- task: ArchiveFiles@2
+  displayName: 'Zip the published files'
+  inputs:
+    rootFolderOrFile: '$(Build.ArtifactStagingDirectory)/publish'
+    includeRootFolder: false
+    archiveType: 'zip'
+    archiveFile: '$(Build.ArtifactStagingDirectory)/publish/$(ProjectName).zip'
+    replaceExistingArchive: true
+
 
 # Deploy
 - task: AzureWebApp@1
