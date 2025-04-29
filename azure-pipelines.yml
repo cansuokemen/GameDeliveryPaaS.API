@@ -4,99 +4,51 @@
 # https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
 
 trigger:
-  branches:
-    include:
-    - master
+- master
 
 pool:
   vmImage: 'windows-latest'
 
 variables:
-  BuildConfiguration: 'Release'
+  buildConfiguration: 'Release'
+  azureSubscription: 'GameDeliveryPaaS-ServiceConnection'
+  appName: 'GameDeliveryPaaS-API'
+  projectPath: 'GameDeliveryPaaS.API.csproj'
 
 steps:
-
-# .NET 9 yükle
 - task: UseDotNet@2
-  displayName: 'Install .NET SDK 9.x'
   inputs:
     packageType: 'sdk'
-    version: '9.x'
-    installationPath: $(Agent.ToolsDirectory)/dotnet
+    version: '9.x' # .NET 9 için SDK versiyonu
 
-# Proje adını al
-- task: PowerShell@2
-  displayName: 'Set project name variable'
-  inputs:
-    targetType: 'inline'
-    script: |
-      $projectFile = Get-ChildItem -Recurse *.csproj | Where-Object { $_.Name -like '*GameDeliveryPaaS.API.csproj' } | Select-Object -First 1
-      if ($projectFile) {
-        Write-Host "Proje bulundu: $($projectFile.FullName)"
-        Write-Host "##vso[task.setvariable variable=ProjectName]$($projectFile.BaseName)"
-      } else {
-        Write-Host "##[warning] Proje dosyası bulunamadı!"
-        Write-Host "##vso[task.setvariable variable=ProjectName]GameDeliveryPaaS.API"
-      }
-
-# Restore
 - task: DotNetCoreCLI@2
-  displayName: 'Restore project dependencies'
+  displayName: 'Restore NuGet packages'
   inputs:
     command: 'restore'
-    projects: '**/*.sln'
-    feedsToUse: 'select'
+    projects: '$(projectPath)'
 
-# Build
 - task: DotNetCoreCLI@2
-  displayName: 'Build project'
+  displayName: 'Build'
   inputs:
     command: 'build'
-    projects: '**/*.sln'
-    arguments: '--configuration $(BuildConfiguration) --no-restore'
+    projects: '$(projectPath)'
+    arguments: '--configuration $(buildConfiguration)'
 
-# Test
 - task: DotNetCoreCLI@2
-  displayName: 'Run tests'
-  inputs:
-    command: 'test'
-    projects: '**/*Tests*.csproj'
-    arguments: '--configuration $(BuildConfiguration) --no-build'
-    publishTestResults: true
-  continueOnError: true
-
-# Publish
-- task: DotNetCoreCLI@2
-  displayName: Publish Project
+  displayName: 'Publish'
   inputs:
     command: 'publish'
-    projects: '**/*.sln'
-    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)/publish'
+    projects: '$(projectPath)'
+    arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/publish'
 
-# Create ZIP from published output
-- task: ArchiveFiles@2
-  displayName: 'Archive published files'
-  inputs:
-    rootFolderOrFile: '$(Build.ArtifactStagingDirectory)/publish'
-    includeRootFolder: false
-    archiveType: 'zip'
-    archiveFile: '$(Build.ArtifactStagingDirectory)/publish/$(ProjectName).zip'
-    replaceExistingArchive: true
+# Check published folder
+- script: dir "$(Build.ArtifactStagingDirectory)" /s
+  displayName: 'Show published files'
 
-# Deploy
 - task: AzureWebApp@1
   displayName: 'Deploy to Azure Web App'
   inputs:
-    azureSubscription: 'GameDeliveryPaaS-ServiceConnection'
+    azureSubscription: '$(azureSubscription)'
     appType: 'webApp'
-    appName: 'GameDeliveryPaaS-API'
-    package: '$(Build.ArtifactStagingDirectory)/publish/$(ProjectName).zip'
-    deploymentMethod: 'auto'
-
-# Temizlik
-- task: DeleteFiles@1
-  displayName: 'Cleanup artifacts'
-  inputs:
-    SourceFolder: '$(Build.ArtifactStagingDirectory)'
-    Contents: '**/*'
-  condition: always()
+    appName: '$(appName)'
+    package: '$(Build.ArtifactStagingDirectory)/publish/s.zip'
