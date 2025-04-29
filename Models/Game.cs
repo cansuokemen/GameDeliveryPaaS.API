@@ -1,5 +1,8 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using GameDeliveryPaaS.API.Models;
+using System.Linq;
+
 
 namespace GameDeliveryPaaS.API.Models
 {
@@ -10,12 +13,12 @@ namespace GameDeliveryPaaS.API.Models
         [BsonIgnoreIfDefault] // eğer boş bırakılırsa Mongo kendi üretir
         public string? Id { get; set; }
 
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
-        public string Genre { get; set; }
+        public string? Genre { get; set; }
         public bool IsFeedbackEnabled { get; set; } = true;
         public List<string> Comments { get; set; } = new();
-        public List<int> Ratings { get; set; } = new();
+        public List<UserRating> Ratings { get; set; } = new();
         public double AverageRating { get; set; } = 0;
 
     }

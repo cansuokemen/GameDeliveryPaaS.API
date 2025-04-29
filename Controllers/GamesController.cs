@@ -89,14 +89,23 @@ namespace GameDeliveryPaaS.API.Controllers
             return Ok("Comment added.");
         }
         [HttpPost("{id}/ratings")]
-        public async Task<IActionResult> AddRating(string id, [FromBody] int rating)
+        public async Task<IActionResult> AddRating(string id, [FromBody] UserRating userRating)
         {
-            var success = await _gameService.AddRatingAsync(id, rating);
+            var success = await _gameService.AddRatingAsync(id, userRating.UserId, userRating.Score);
             if (!success)
-                return BadRequest("Invalid rating or game not found / feedback disabled.");
+                return BadRequest("Invalid rating, user already voted, or game not found.");
 
             return Ok("Rating added.");
         }
 
+        [HttpDelete("{id}/ratings/{userId}")]
+        public async Task<IActionResult> RemoveRating(string id, string userId)
+        {
+            var removed = await _gameService.RemoveRatingAsync(id, userId);
+            if (!removed)
+                return NotFound($"Rating by user '{userId}' not found for game {id}.");
+
+            return NoContent(); // 204
+        }
     }
 }
