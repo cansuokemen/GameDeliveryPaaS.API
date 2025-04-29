@@ -1,5 +1,6 @@
 ﻿using GameDeliveryPaaS.API.Models;
 using GameDeliveryPaaS.API.Settings;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace GameDeliveryPaaS.API.Services
@@ -21,6 +22,12 @@ namespace GameDeliveryPaaS.API.Services
         public async Task<List<Game>> GetAllGamesAsync()
         {
             return await _games.Find(_ => true).ToListAsync();
+        }
+        public async Task<bool> DeleteGameAsync(string id)
+        {
+            var objectId = ObjectId.Parse(id);
+            var result = await _games.DeleteOneAsync(game => game.Id == id);
+            return result.DeletedCount > 0;
         }
     }
 }

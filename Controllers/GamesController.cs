@@ -26,5 +26,17 @@ namespace GameDeliveryPaaS.API.Controllers
             await _gameService.AddGameAsync(newGame);
             return CreatedAtAction(nameof(CreateGame), new { id = newGame.Id }, newGame);
         }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteGame(string id)
+        {
+            var deleted = await _gameService.DeleteGameAsync(id);
+            if (!deleted)
+            {
+                return NotFound($"Game with ID {id} not found.");
+            }
+
+            return NoContent();
+        }
     }
 }
