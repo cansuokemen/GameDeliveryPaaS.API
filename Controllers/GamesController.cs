@@ -44,5 +44,17 @@ namespace GameDeliveryPaaS.API.Controllers
             var games = await _gameService.GetAllGamesAsync();
             return Ok(games);
         }
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetGameById(string id)
+        {
+            var game = await _gameService.GetGameByIdAsync(id);
+            if (game == null)
+            {
+                return NotFound($"Game with ID {id} not found.");
+            }
+
+            return Ok(game);
+        }
+
     }
 }

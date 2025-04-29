@@ -29,5 +29,10 @@ namespace GameDeliveryPaaS.API.Services
             var result = await _games.DeleteOneAsync(game => game.Id == id);
             return result.DeletedCount > 0;
         }
+        public async Task<Game?> GetGameByIdAsync(string id)
+        {
+            return await _games.Find(game => game.Id == id).FirstOrDefaultAsync();
+        }
+
     }
 }
