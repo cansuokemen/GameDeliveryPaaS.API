@@ -38,7 +38,11 @@ namespace GameDeliveryPaaS.API.Services
             var result = await _games.ReplaceOneAsync(game => game.Id == id, updatedGame);
             return result.ModifiedCount > 0;
         }
-
-
+        public async Task<bool> DisableFeedbackAsync(string id)
+        {
+            var update = Builders<Game>.Update.Set(g => g.IsFeedbackEnabled, false);
+            var result = await _games.UpdateOneAsync(game => game.Id == id, update);
+            return result.ModifiedCount > 0;
+        }
     }
 }

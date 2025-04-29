@@ -68,6 +68,18 @@ namespace GameDeliveryPaaS.API.Controllers
 
             return NoContent(); // 204: başarıyla güncellendi, içerik dönmüyoruz
         }
+        [HttpPatch("{id}/disable-feedback")]
+        public async Task<IActionResult> DisableFeedback(string id)
+        {
+            var updated = await _gameService.DisableFeedbackAsync(id);
+            if (!updated)
+            {
+                return NotFound($"Game with ID {id} not found.");
+            }
+
+            return NoContent();
+        }
+
 
     }
 }
