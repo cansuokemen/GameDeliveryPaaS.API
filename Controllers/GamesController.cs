@@ -55,6 +55,19 @@ namespace GameDeliveryPaaS.API.Controllers
 
             return Ok(game);
         }
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateGame(string id, [FromBody] Game updatedGame)
+        {
+            updatedGame.Id = id; // Id’yi sağlamlaştır (gelen nesneye set et)
+
+            var updated = await _gameService.UpdateGameAsync(id, updatedGame);
+            if (!updated)
+            {
+                return NotFound($"Game with ID {id} not found.");
+            }
+
+            return NoContent(); // 204: başarıyla güncellendi, içerik dönmüyoruz
+        }
 
     }
 }

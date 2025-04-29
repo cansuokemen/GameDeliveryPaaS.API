@@ -33,6 +33,12 @@ namespace GameDeliveryPaaS.API.Services
         {
             return await _games.Find(game => game.Id == id).FirstOrDefaultAsync();
         }
+        public async Task<bool> UpdateGameAsync(string id, Game updatedGame)
+        {
+            var result = await _games.ReplaceOneAsync(game => game.Id == id, updatedGame);
+            return result.ModifiedCount > 0;
+        }
+
 
     }
 }
