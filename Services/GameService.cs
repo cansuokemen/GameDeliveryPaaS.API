@@ -44,5 +44,15 @@ namespace GameDeliveryPaaS.API.Services
             var result = await _games.UpdateOneAsync(game => game.Id == id, update);
             return result.ModifiedCount > 0;
         }
+        public async Task<bool> AddCommentAsync(string id, string comment)
+        {
+            var update = Builders<Game>.Update.Push(g => g.Comments, comment);
+            var result = await _games.UpdateOneAsync(
+                game => game.Id == id && game.IsFeedbackEnabled,
+                update
+            );
+            return result.ModifiedCount > 0;
+        }
+
     }
 }

@@ -14,6 +14,7 @@ namespace GameDeliveryPaaS.API.Models
 
         public string Genre { get; set; }
         public bool IsFeedbackEnabled { get; set; } = true;
+        public List<string> Comments { get; set; } = new();
 
     }
 }

@@ -79,7 +79,14 @@ namespace GameDeliveryPaaS.API.Controllers
 
             return NoContent();
         }
+        [HttpPost("{id}/comments")]
+        public async Task<IActionResult> AddComment(string id, [FromBody] string comment)
+        {
+            var updated = await _gameService.AddCommentAsync(id, comment);
+            if (!updated)
+                return BadRequest("Game not found or feedback is disabled.");
 
-
+            return Ok("Comment added.");
+        }
     }
 }
