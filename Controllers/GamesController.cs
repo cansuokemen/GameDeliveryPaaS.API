@@ -107,5 +107,11 @@ namespace GameDeliveryPaaS.API.Controllers
 
             return NoContent(); // 204
         }
+        [HttpGet("full")]
+        public async Task<IActionResult> GetFullGames()
+        {
+            var games = await _gameService.GetFullGamesAsync();
+            return Ok(games);
+        }
     }
 }

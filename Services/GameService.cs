@@ -124,6 +124,20 @@ namespace GameDeliveryPaaS.API.Services
             var result = await _games.UpdateOneAsync(g => g.Id == gameId, update);
             return result.ModifiedCount > 0;
         }
+        public async Task<List<GameFullDto>> GetFullGamesAsync()
+        {
+            var games = await _games.Find(_ => true).ToListAsync();
 
+            return games.Select(game => new GameFullDto
+            {
+                Name = game.Name,
+                Genre = game.Genre,
+                AverageRating = game.AverageRating,
+                TotalPlayTime = game.TotalPlayTime,
+                Ratings = game.Ratings,
+                Comments = game.Comments,
+                PlayedUsers = game.PlayedUsers
+            }).ToList();
+        }
     }
 }
