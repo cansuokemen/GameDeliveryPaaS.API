@@ -80,14 +80,15 @@ namespace GameDeliveryPaaS.API.Controllers
             return NoContent();
         }
         [HttpPost("{id}/comments")]
-        public async Task<IActionResult> AddComment(string id, [FromBody] string comment)
+        public async Task<IActionResult> AddComment(string id, [FromQuery] string userId, [FromBody] string comment)
         {
-            var updated = await _gameService.AddCommentAsync(id, comment);
+            var updated = await _gameService.AddCommentAsync(id, userId, comment);
             if (!updated)
                 return BadRequest("Game not found or feedback is disabled.");
 
             return Ok("Comment added.");
         }
+
         [HttpDelete("{id}/ratings/{userId}")]
         public async Task<IActionResult> RemoveRating(string id, string userId)
         {
@@ -98,15 +99,13 @@ namespace GameDeliveryPaaS.API.Controllers
             return NoContent(); // 204
         }
         [HttpDelete("{id}/comments")]
-        public async Task<IActionResult> RemoveComment(string id, [FromQuery] string content)
+        public async Task<IActionResult> RemoveComment(string id, [FromQuery] string userId)
         {
-            var removed = await _gameService.RemoveCommentAsync(id, content);
+            var removed = await _gameService.RemoveCommentAsync(id, userId);
             if (!removed)
                 return NotFound("Comment not found.");
 
             return NoContent(); // 204
         }
-
-
     }
 }

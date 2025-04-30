@@ -98,5 +98,64 @@ namespace GameDeliveryPaaS.API.Services
         {
             return await _users.Find(u => u.Username == username).FirstOrDefaultAsync();
         }
+        public async Task<UserSummaryDto?> GetUserSummaryAsync(string userId, IMongoCollection<Game> gameCollection)
+        {
+            var user = await GetByIdAsync(userId);
+            if (user == null) return null;
+
+            var userRatings = new List<(int score, int playTime)>();
+            int totalPlayTime = 0;
+            string? mostPlayedGame = null;
+            int mostPlayMinutes = 0;
+            var commentList = new List<CommentDto>();
+
+            foreach (var gameId in user.PlayedGameIds)
+            {
+                var game = await gameCollection.Find(g => g.Id == gameId).FirstOrDefaultAsync();
+                if (game == null) continue;
+
+                var rating = game.Ratings?.FirstOrDefault(r => r.UserId == userId);
+                var play = game.PlayedUsers?.FirstOrDefault(p => p.UserId == userId);
+                var comment = game.Comments?.FirstOrDefault(c => c.UserId == userId);
+
+                if (play != null)
+                {
+                    totalPlayTime += play.Minutes;
+                    if (play.Minutes > mostPlayMinutes)
+                    {
+                        mostPlayMinutes = play.Minutes;
+                        mostPlayedGame = game.Name;
+                    }
+                }
+
+                if (rating != null && play != null)
+                {
+                    userRatings.Add((rating.Score, play.Minutes));
+                }
+
+                if (comment != null)
+                {
+                    commentList.Add(new CommentDto
+                    {
+                        GameName = game.Name,
+                        Content = comment.Content
+                    });
+                }
+            }
+
+            double avgRating = userRatings.Count > 0
+                ? userRatings.Sum(r => r.score) / (double)userRatings.Count
+                : 0;
+
+            return new UserSummaryDto
+            {
+                Username = user.Username,
+                AverageRating = Math.Round(avgRating, 2),
+                TotalPlayTime = totalPlayTime,
+                MostPlayedGame = mostPlayedGame,
+                Comments = commentList
+            };
+        }
+
     }
 }

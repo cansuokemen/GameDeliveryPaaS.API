@@ -44,16 +44,24 @@ namespace GameDeliveryPaaS.API.Services
             var result = await _games.UpdateOneAsync(game => game.Id == id, update);
             return result.ModifiedCount > 0;
         }
-        public async Task<bool> AddCommentAsync(string id, string comment)
+        public async Task<bool> AddCommentAsync(string gameId, string userId, string content)
         {
-            var update = Builders<Game>.Update.Push(g => g.Comments, comment);
+            var newComment = new UserComment
+            {
+                UserId = userId,
+                Content = content
+            };
+
+            var update = Builders<Game>.Update.Push(g => g.Comments, newComment);
             var result = await _games.UpdateOneAsync(
-                game => game.Id == id && game.IsFeedbackEnabled,
+                game => game.Id == gameId && game.IsFeedbackEnabled,
                 update
             );
+
             return result.ModifiedCount > 0;
         }
-       
+
+
         public async Task<bool> AddGamePlayTimeAsync(string gameId, int hours)
         {
             var update = Builders<Game>.Update.Inc(g => g.TotalPlayTime, hours);
@@ -108,11 +116,14 @@ namespace GameDeliveryPaaS.API.Services
             var result = await _games.ReplaceOneAsync(g => g.Id == gameId, game);
             return result.ModifiedCount > 0;
         }
-        public async Task<bool> RemoveCommentAsync(string gameId, string comment)
+        public async Task<bool> RemoveCommentAsync(string gameId, string userId)
         {
-            var update = Builders<Game>.Update.Pull(g => g.Comments, comment);
+            var filter = Builders<UserComment>.Filter.Eq(c => c.UserId, userId);
+            var update = Builders<Game>.Update.PullFilter(g => g.Comments, filter);
+
             var result = await _games.UpdateOneAsync(g => g.Id == gameId, update);
             return result.ModifiedCount > 0;
         }
+
     }
 }

@@ -1,6 +1,7 @@
 ﻿using GameDeliveryPaaS.API.Models;
 using GameDeliveryPaaS.API.Services;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Driver;
 
 namespace GameDeliveryPaaS.API.Controllers
 {
@@ -112,6 +113,17 @@ namespace GameDeliveryPaaS.API.Controllers
                 return NotFound("User not found.");
 
             return Ok(user); // Kullanıcıyı başarılı şekilde döndür
+        }
+        [HttpGet("{id}/summary")]
+        public async Task<IActionResult> GetUserSummary(string id, [FromServices] IMongoDatabase database)
+        {
+            var gameCollection = database.GetCollection<Game>("Games");
+            var summary = await _userService.GetUserSummaryAsync(id, gameCollection);
+
+            if (summary == null)
+                return NotFound("User or games not found.");
+
+            return Ok(summary);
         }
     }
 }
