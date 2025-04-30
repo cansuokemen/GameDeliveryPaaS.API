@@ -20,6 +20,7 @@ namespace GameDeliveryPaaS.API.Models
         public List<string> Comments { get; set; } = new();
         public double AverageRating { get; set; } = 0;
         public int TotalPlayTime { get; set; } = 0; // saat cinsinden
+        public List<UserRating> Ratings { get; set; } = new();
 
 
     }

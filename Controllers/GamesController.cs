@@ -88,5 +88,15 @@ namespace GameDeliveryPaaS.API.Controllers
 
             return Ok("Comment added.");
         }
+        [HttpDelete("{id}/ratings/{userId}")]
+        public async Task<IActionResult> RemoveRating(string id, string userId)
+        {
+            var removed = await _gameService.RemoveRatingAsync(id, userId);
+            if (!removed)
+                return NotFound($"Rating by user '{userId}' not found for game {id}.");
+
+            return NoContent(); // 204
+        }
+
     }
 }
