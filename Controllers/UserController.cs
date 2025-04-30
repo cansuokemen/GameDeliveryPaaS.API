@@ -43,14 +43,17 @@ namespace GameDeliveryPaaS.API.Controllers
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteUser(string id)
+        public async Task<IActionResult> Delete(string id, [FromServices] IMongoDatabase database)
         {
-            var deleted = await _userService.DeleteAsync(id);
-            if (!deleted)
-                return NotFound($"User with ID {id} not found.");
+            var gameCollection = database.GetCollection<Game>("Games");
 
-            return NoContent();
+            var deleted = await _userService.DeleteAsync(id, gameCollection);
+            if (!deleted)
+                return NotFound("User not found or could not be deleted.");
+
+            return NoContent(); // 204
         }
+
         [HttpPost("{userId}/play/{gameId}")]
         public async Task<IActionResult> PlayGame(string userId, string gameId, [FromQuery] int hours)
         {

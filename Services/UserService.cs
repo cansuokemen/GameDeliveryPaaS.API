@@ -27,11 +27,63 @@ namespace GameDeliveryPaaS.API.Services
             await _users.InsertOneAsync(user);
         }
 
-        public async Task<bool> DeleteAsync(string id)
+        public async Task<bool> DeleteAsync(string id, IMongoCollection<Game> gameCollection)
         {
+            var user = await GetByIdAsync(id);
+            if (user == null) return false;
+
+            // Kullanıcının etkilediği tüm oyunları bul
+            var games = await gameCollection.Find(_ => true).ToListAsync();
+
+            foreach (var game in games)
+            {
+                bool modified = false;
+
+                // Yorumları temizle
+                var pullComments = Builders<Game>.Update.PullFilter(
+                    g => g.Comments,
+                    Builders<UserComment>.Filter.Eq(c => c.UserId, id)
+                );
+
+                // Puanları temizle
+                var pullRatings = Builders<Game>.Update.PullFilter(
+                    g => g.Ratings,
+                    Builders<UserRating>.Filter.Eq(r => r.UserId, id)
+                );
+
+                // Oynama verisini temizle
+                var pullPlayData = Builders<Game>.Update.PullFilter(
+                    g => g.PlayedUsers,
+                    Builders<UserGamePlay>.Filter.Eq(p => p.UserId, id)
+                );
+
+                await gameCollection.UpdateOneAsync(g => g.Id == game.Id, pullComments);
+                await gameCollection.UpdateOneAsync(g => g.Id == game.Id, pullRatings);
+                await gameCollection.UpdateOneAsync(g => g.Id == game.Id, pullPlayData);
+
+                // Ortalama puanı ve toplam süresini yeniden hesapla (isteğe bağlı)
+                var updatedGame = await gameCollection.Find(g => g.Id == game.Id).FirstOrDefaultAsync();
+                if (updatedGame != null)
+                {
+                    double newAvg = updatedGame.Ratings.Count > 0
+                        ? updatedGame.Ratings.Average(r => r.Score)
+                        : 0;
+
+                    int newTotalTime = updatedGame.PlayedUsers.Sum(p => p.Minutes);
+
+                    var updateFields = Builders<Game>.Update
+                        .Set(g => g.AverageRating, newAvg)
+                        .Set(g => g.TotalPlayTime, newTotalTime);
+
+                    await gameCollection.UpdateOneAsync(g => g.Id == game.Id, updateFields);
+                }
+            }
+
+            // Son olarak kullanıcıyı sil
             var result = await _users.DeleteOneAsync(u => u.Id == id);
             return result.DeletedCount > 0;
         }
+
         public async Task<bool> AddPlayTimeAsync(string userId, string gameId, int hours)
         {
             var user = await _users.Find(u => u.Id == userId).FirstOrDefaultAsync();
