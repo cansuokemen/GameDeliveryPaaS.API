@@ -108,7 +108,11 @@ namespace GameDeliveryPaaS.API.Services
             var result = await _games.ReplaceOneAsync(g => g.Id == gameId, game);
             return result.ModifiedCount > 0;
         }
-
-
+        public async Task<bool> RemoveCommentAsync(string gameId, string comment)
+        {
+            var update = Builders<Game>.Update.Pull(g => g.Comments, comment);
+            var result = await _games.UpdateOneAsync(g => g.Id == gameId, update);
+            return result.ModifiedCount > 0;
+        }
     }
 }

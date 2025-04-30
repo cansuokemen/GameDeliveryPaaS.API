@@ -97,6 +97,16 @@ namespace GameDeliveryPaaS.API.Controllers
 
             return NoContent(); // 204
         }
+        [HttpDelete("{id}/comments")]
+        public async Task<IActionResult> RemoveComment(string id, [FromQuery] string content)
+        {
+            var removed = await _gameService.RemoveCommentAsync(id, content);
+            if (!removed)
+                return NotFound("Comment not found.");
+
+            return NoContent(); // 204
+        }
+
 
     }
 }
