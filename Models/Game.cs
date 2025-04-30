@@ -18,8 +18,9 @@ namespace GameDeliveryPaaS.API.Models
         public string? Genre { get; set; }
         public bool IsFeedbackEnabled { get; set; } = true;
         public List<string> Comments { get; set; } = new();
-        public List<UserRating> Ratings { get; set; } = new();
         public double AverageRating { get; set; } = 0;
+        public int TotalPlayTime { get; set; } = 0; // saat cinsinden
+
 
     }
 }

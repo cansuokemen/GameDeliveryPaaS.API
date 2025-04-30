@@ -53,48 +53,43 @@ namespace GameDeliveryPaaS.API.Services
             );
             return result.ModifiedCount > 0;
         }
-        public async Task<bool> AddRatingAsync(string id, string userId, int score)
+       
+        public async Task<bool> AddGamePlayTimeAsync(string gameId, int hours)
         {
-            if (score < 1 || score > 5)
-                return false;
-
-            var game = await _games.Find(g => g.Id == id && g.IsFeedbackEnabled).FirstOrDefaultAsync();
-            if (game == null)
-                return false;
-
-            // Kullanıcının daha önce puan verip vermediğini kontrol et
-            var existingRating = game.Ratings.FirstOrDefault(r => r.UserId == userId);
-            if (existingRating != null)
-                return false; // aynı kullanıcı birden fazla puan veremesin (isteğe bağlı)
-
-            // Yeni oyu ekle
-            game.Ratings.Add(new UserRating { UserId = userId, Score = score });
-
-            // Ortalama hesapla
-            game.AverageRating = game.Ratings.Average(r => r.Score);
-
-            var result = await _games.ReplaceOneAsync(g => g.Id == id, game);
+            var update = Builders<Game>.Update.Inc(g => g.TotalPlayTime, hours);
+            var result = await _games.UpdateOneAsync(g => g.Id == gameId, update);
             return result.ModifiedCount > 0;
         }
-
-        public async Task<bool> RemoveRatingAsync(string gameId, string userId)
+        public async Task<bool> UpdateAverageRatingAsync(string gameId, IMongoCollection<User> userCollection)
         {
             var game = await _games.Find(g => g.Id == gameId).FirstOrDefaultAsync();
-            if (game == null)
-                return false;
+            if (game == null) return false;
 
-            var ratingToRemove = game.Ratings.FirstOrDefault(r => r.UserId == userId);
-            if (ratingToRemove == null)
-                return false;
+            var users = await userCollection.Find(_ => true).ToListAsync();
 
-            game.Ratings.Remove(ratingToRemove);
-            game.AverageRating = game.Ratings.Count > 0
-                ? game.Ratings.Average(r => r.Score)
-                : 0;
+            double totalWeightedRating = 0;
+            int totalPlayTime = 0;
 
-            var result = await _games.ReplaceOneAsync(g => g.Id == gameId, game);
+            foreach (var user in users)
+            {
+                var play = user.PlayedGames.FirstOrDefault(p => p.GameId == gameId);
+                var rating = user.RatedGames.FirstOrDefault(r => r.GameId == gameId);
+
+                if (play != null && rating != null && play.PlayTimeHours > 0)
+                {
+                    totalWeightedRating += play.PlayTimeHours * rating.Rating;
+                    totalPlayTime += play.PlayTimeHours;
+                }
+            }
+
+            double average = totalPlayTime > 0 ? totalWeightedRating / totalPlayTime : 0;
+
+            var update = Builders<Game>.Update.Set(g => g.AverageRating, average);
+            var result = await _games.UpdateOneAsync(g => g.Id == gameId, update);
+
             return result.ModifiedCount > 0;
         }
+
 
     }
 }

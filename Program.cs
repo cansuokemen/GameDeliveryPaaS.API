@@ -31,6 +31,8 @@ builder.Services.AddSingleton(serviceProvider =>
     return mongoClient.GetDatabase(settings.DatabaseName);
 });
 builder.Services.AddSingleton<GameService>();
+builder.Services.AddSingleton<UserService>();
+
 
 
 var app = builder.Build();
