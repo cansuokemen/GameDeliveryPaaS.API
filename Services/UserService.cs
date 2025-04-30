@@ -88,5 +88,15 @@ namespace GameDeliveryPaaS.API.Services
         {
             return _users;
         }
+        public async Task<bool> UsernameExistsAsync(string username)
+        {
+            var user = await _users.Find(u => u.Username == username).FirstOrDefaultAsync();
+            return user != null;
+        }
+
+        public async Task<User?> GetByUsernameAsync(string username)
+        {
+            return await _users.Find(u => u.Username == username).FirstOrDefaultAsync();
+        }
     }
 }

@@ -24,7 +24,7 @@ namespace GameDeliveryPaaS.API.Controllers
             return Ok(users);
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("by-id/{id}")]
         public async Task<IActionResult> GetUserById(string id)
         {
             var user = await _userService.GetByIdAsync(id);
@@ -77,6 +77,41 @@ namespace GameDeliveryPaaS.API.Controllers
                 return NotFound("Game not found.");
 
             return Ok("Rating submitted and average updated.");
+        }
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(string id)
+        {
+            var user = await _userService.GetByIdAsync(id);
+            if (user == null)
+                return NotFound("User not found.");
+
+            return Ok(user);
+        }
+
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] User newUser)
+        {
+            if (string.IsNullOrEmpty(newUser.Username))
+                return BadRequest("Username is required.");
+
+            var exists = await _userService.UsernameExistsAsync(newUser.Username);
+            if (exists)
+                return Conflict("Username already exists.");
+
+            await _userService.AddAsync(newUser);
+            return CreatedAtAction(nameof(GetById), new { id = newUser.Id }, newUser);
+        }
+        [HttpGet("login")]
+        public async Task<IActionResult> Login([FromQuery] string username)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+                return BadRequest("Username is required.");
+
+            var user = await _userService.GetByUsernameAsync(username);
+            if (user == null)
+                return NotFound("User not found.");
+
+            return Ok(user); // Kullanıcıyı başarılı şekilde döndür
         }
     }
 }
