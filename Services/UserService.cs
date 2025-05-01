@@ -14,6 +14,28 @@ namespace GameDeliveryPaaS.API.Services
             _games = database.GetCollection<Game>("Games");
         }
 
+        public async Task<User> UpdateAsync(User userToUpdate)
+        {
+            if (userToUpdate == null)
+                throw new ArgumentNullException(nameof(userToUpdate));
+
+            if (string.IsNullOrEmpty(userToUpdate.Id))
+                throw new ArgumentException("User ID cannot be null or empty", nameof(userToUpdate.Id));
+
+            var filter = Builders<User>.Filter.Eq(u => u.Id, userToUpdate.Id);
+
+            // ReplaceOneAsync tüm belgeyi değiştirir
+            var result = await _users.ReplaceOneAsync(filter, userToUpdate);
+
+            if (result.IsAcknowledged && result.ModifiedCount > 0)
+            {
+                return userToUpdate;
+            }
+
+            // Eğer kayıt bulunamadıysa veya bir hata olduysa null döndür
+            return null;
+        }
+
         public async Task<List<User>> GetAllAsync()
         {
             return await _users.Find(_ => true).ToListAsync();

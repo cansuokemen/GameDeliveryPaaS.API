@@ -26,6 +26,27 @@ namespace GameDeliveryPaaS.API.Controllers
             return Ok(users);
         }
 
+        [HttpPut("UpdateUserCommentPermission")]
+        public async Task<IActionResult> UpdateUserCommentPermission(string userId, bool canComment)
+        {
+            var user = await _userService.GetByIdAsync(userId);
+            if (user == null)
+            {
+                return NotFound("User could not find");
+            }
+
+            var updatedUser = user.CanComment = canComment;
+
+            var result = await _userService.UpdateAsync(user);
+
+            if (result == null)
+            {
+                return BadRequest("Permission could not be updated.");
+            }
+
+            return Ok(result);
+        }
+
         [HttpGet("by-id/{id}")]
         public async Task<IActionResult> GetUserById(string id)
         {

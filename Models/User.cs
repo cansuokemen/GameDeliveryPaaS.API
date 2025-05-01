@@ -8,9 +8,10 @@ namespace GameDeliveryPaaS.API.Models
         [BsonId]
         [BsonRepresentation(BsonType.ObjectId)]
         public string? Id { get; set; }
-
         public string Username { get; set; } = null!;
         public string Email { get; set; } = null!;
+        public bool CanComment { get; set; }
+        public bool CanRate { get; set; }
 
         public List<string> PlayedGameIds { get; set; } = new();
         public List<UserGamePlay> PlayedGames { get; set; } = new();

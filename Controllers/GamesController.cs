@@ -9,10 +9,12 @@ namespace GameDeliveryPaaS.API.Controllers
     public class GamesController : ControllerBase
     {
         private readonly GameService _gameService;
+        private readonly UserService _userService;
 
-        public GamesController(GameService gameService)
+        public GamesController(GameService gameService, UserService userService)
         {
             _gameService = gameService;
+            _userService = userService;
         }
 
         [HttpPost]
@@ -82,6 +84,18 @@ namespace GameDeliveryPaaS.API.Controllers
         [HttpPost("{id}/comments")]
         public async Task<IActionResult> AddComment(string id, [FromQuery] string userId, [FromBody] string comment)
         {
+            var user = await _userService.GetByIdAsync(userId);
+
+            if (user is null)
+            {
+                return NotFound("User could not find.");
+            }
+
+            if(user.CanComment is false)
+            {
+                return BadRequest("User does not have comment permission");
+            }
+
             var updated = await _gameService.AddCommentAsync(id, userId, comment);
             if (!updated)
                 return BadRequest("Game not found or feedback is disabled.");
