@@ -9,5 +9,6 @@
         public List<UserRating>? Ratings { get; set; }
         public List<UserComment>? Comments { get; set; }
         public List<UserGamePlay>? PlayedUsers { get; set; }
+        public string? Img { get; set; }
     }
 }

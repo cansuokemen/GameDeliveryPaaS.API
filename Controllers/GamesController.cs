@@ -136,5 +136,23 @@ namespace GameDeliveryPaaS.API.Controllers
 
             return Ok("Rating submitted successfully.");
         }
+        [HttpGet("{id}/with-image")]
+        public async Task<ActionResult<GameFullDto>> GetGame(string id)
+        {
+            var game = await _gameService.GetFullGameDtoAsync(id); // içinde Img dolu olmalı
+            return Ok(game);
+        }
+        [HttpPut("{id}/image")]
+        public async Task<IActionResult> UpdateGameImage(string id, [FromBody] string imageUrl)
+        {
+            var game = await _gameService.GetByIdAsync(id);
+            if (game == null)
+                return NotFound("Game not found.");
+
+            game.Img = imageUrl;
+            await _gameService.UpdateAsync(id, game);
+
+            return Ok("Image updated successfully.");
+        }
     }
 }

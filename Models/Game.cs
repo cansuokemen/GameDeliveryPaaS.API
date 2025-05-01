@@ -23,5 +23,10 @@ namespace GameDeliveryPaaS.API.Models
 
         [BsonElement("PlayedUsers")]
         public List<UserGamePlay> PlayedUsers { get; set; } = new();
+
+        [BsonElement("Img")]
+        public string? Img { get; set; }
+
+
     }
 }

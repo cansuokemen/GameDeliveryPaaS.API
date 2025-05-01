@@ -161,5 +161,32 @@ namespace GameDeliveryPaaS.API.Services
             var res = await _games.UpdateOneAsync(filter, push);
             return res.ModifiedCount > 0;
         }
+        public async Task<GameFullDto?> GetFullGameDtoAsync(string id)
+        {
+            var game = await _games.Find(g => g.Id == id).FirstOrDefaultAsync();
+            if (game == null)
+                return null;
+
+            // DTO'ya mapleme
+            return new GameFullDto
+            {
+                Name = game.Name,
+                Genre = game.Genre,
+                AverageRating = game.AverageRating,
+                TotalPlayTime = game.TotalPlayTime,
+                Img = game.Img, // ✅ Burası önemli
+                Ratings = game.Ratings,
+                Comments = game.Comments,
+                PlayedUsers = game.PlayedUsers
+            };
+        }
+        public async Task<Game?> GetByIdAsync(string id)
+        {
+            return await _games.Find(g => g.Id == id).FirstOrDefaultAsync();
+        }
+        public async Task UpdateAsync(string id, Game updatedGame)
+        {
+            await _games.ReplaceOneAsync(g => g.Id == id, updatedGame);
+        }
     }
 }
