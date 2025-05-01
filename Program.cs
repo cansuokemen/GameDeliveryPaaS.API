@@ -17,6 +17,17 @@ if (!BsonClassMap.IsClassMapRegistered(typeof(UserGamePlay)))
     });
 }
 
+// 👇 CORS yapılandırması ekleniyor
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer(); // bu önemli!
@@ -51,6 +62,9 @@ var app = builder.Build();
 // Swagger arayüzü ve JSON
 app.UseSwagger();
 app.UseSwaggerUI();
+
+// CORS
+app.UseCors("AllowAll");
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
