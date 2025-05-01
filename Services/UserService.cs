@@ -35,6 +35,28 @@ namespace GameDeliveryPaaS.API.Services
             // Eğer kayıt bulunamadıysa veya bir hata olduysa null döndür
             return null;
         }
+        public async Task<User?> UpdateUserRatePermissionAsync(string userId, bool canRate)
+        {
+            if (string.IsNullOrEmpty(userId))
+                throw new ArgumentException("User ID cannot be null or empty", nameof(userId));
+
+            var user = await GetByIdAsync(userId);
+            if (user == null)
+                return null;
+
+            user.CanRate = canRate;
+
+            var filter = Builders<User>.Filter.Eq(u => u.Id, userId);
+            var result = await _users.ReplaceOneAsync(filter, user);
+
+            if (result.IsAcknowledged && result.ModifiedCount > 0)
+            {
+                return user;
+            }
+
+            return null;
+        }
+
 
         public async Task<List<User>> GetAllAsync()
         {

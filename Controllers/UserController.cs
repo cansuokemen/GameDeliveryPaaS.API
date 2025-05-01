@@ -46,6 +46,26 @@ namespace GameDeliveryPaaS.API.Controllers
 
             return Ok(result);
         }
+        [HttpPut("UpdateUserRatePermission")]
+        public async Task<IActionResult> UpdateUserRatePermission(string userId, bool canRate)
+        {
+            var user = await _userService.GetByIdAsync(userId);
+            if (user == null)
+            {
+                return NotFound("User could not find");
+            }
+
+            var updatedUser = user.CanRate = canRate;
+
+            var result = await _userService.UpdateAsync(user);
+
+            if (result == null)
+            {
+                return BadRequest("Permission could not be updated.");
+            }
+
+            return Ok(result);
+        }
 
         [HttpGet("by-id/{id}")]
         public async Task<IActionResult> GetUserById(string id)
