@@ -2,8 +2,20 @@
 using MongoDB.Driver;
 using GameDeliveryPaaS.API.Settings;
 using GameDeliveryPaaS.API.Services;
+using MongoDB.Bson.Serialization;
+using GameDeliveryPaaS.API.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// 👇 Bson ClassMap: UserGamePlay modelini açıkça MongoDB'ye tanıt
+if (!BsonClassMap.IsClassMapRegistered(typeof(UserGamePlay)))
+{
+    BsonClassMap.RegisterClassMap<UserGamePlay>(cm =>
+    {
+        cm.AutoMap();
+        cm.SetIgnoreExtraElements(true);
+    });
+}
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -30,25 +42,17 @@ builder.Services.AddSingleton(serviceProvider =>
     var settings = serviceProvider.GetRequiredService<IOptions<MongoDbSettings>>().Value;
     return mongoClient.GetDatabase(settings.DatabaseName);
 });
+
 builder.Services.AddSingleton<GameService>();
 builder.Services.AddSingleton<UserService>();
 
-
-
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-
-
-app.UseSwagger(); // Swagger JSON dosyasını üretir
-app.UseSwaggerUI(); // Arayüzü sunar
-
+// Swagger arayüzü ve JSON
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
-
 app.UseAuthorization();
-
 app.MapControllers();
-
 app.Run();
-

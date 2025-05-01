@@ -46,6 +46,13 @@ namespace GameDeliveryPaaS.API.Services
         }
         public async Task<bool> AddCommentAsync(string gameId, string userId, string content)
         {
+            // Kullanıcının oyunu en az 60 dakika oynayıp oynamadığını kontrol et
+            var game = await _games.Find(g => g.Id == gameId).FirstOrDefaultAsync();
+            if (game == null || !game.IsFeedbackEnabled) return false;
+
+            var play = game.PlayedUsers?.FirstOrDefault(p => p.UserId == userId);
+            if (play == null || play.Minutes < 60) return false;
+
             var newComment = new UserComment
             {
                 UserId = userId,
@@ -53,14 +60,10 @@ namespace GameDeliveryPaaS.API.Services
             };
 
             var update = Builders<Game>.Update.Push(g => g.Comments, newComment);
-            var result = await _games.UpdateOneAsync(
-                game => game.Id == gameId && game.IsFeedbackEnabled,
-                update
-            );
+            var result = await _games.UpdateOneAsync(g => g.Id == gameId, update);
 
             return result.ModifiedCount > 0;
         }
-
 
         public async Task<bool> AddGamePlayTimeAsync(string gameId, int hours)
         {
@@ -73,29 +76,15 @@ namespace GameDeliveryPaaS.API.Services
             var game = await _games.Find(g => g.Id == gameId).FirstOrDefaultAsync();
             if (game == null) return false;
 
-            var users = await userCollection.Find(_ => true).ToListAsync();
+            var ratingsCount = game.Ratings.Count;
+            var totalRating = game.Ratings.Sum(r => r.Rating);
 
-            double totalWeightedRating = 0;
-            int totalPlayTime = 0;
-
-            foreach (var user in users)
-            {
-                var play = user.PlayedGames.FirstOrDefault(p => p.GameId == gameId);
-                var rating = user.RatedGames.FirstOrDefault(r => r.GameId == gameId);
-
-                if (play != null && rating != null && play.PlayTimeHours > 0)
-                {
-                    totalWeightedRating += play.PlayTimeHours * rating.Rating;
-                    totalPlayTime += play.PlayTimeHours;
-                }
-            }
-
-            double average = totalPlayTime > 0 ? totalWeightedRating / totalPlayTime : 0;
+            double average = totalRating / ratingsCount;
 
             var update = Builders<Game>.Update.Set(g => g.AverageRating, average);
             var result = await _games.UpdateOneAsync(g => g.Id == gameId, update);
 
-            return result.ModifiedCount > 0;
+            return true;
         }
         public async Task<bool> RemoveRatingAsync(string gameId, string userId)
         {
@@ -138,6 +127,39 @@ namespace GameDeliveryPaaS.API.Services
                 Comments = game.Comments,
                 PlayedUsers = game.PlayedUsers
             }).ToList();
+        }
+        public async Task<bool> RateGameAsync(string gameId, string userId, int score)
+        {
+            if (score < 1 || score > 5) return false;
+
+            var game = await _games.Find(g => g.Id == gameId).FirstOrDefaultAsync();
+            if (game == null || !game.IsFeedbackEnabled) return false;
+
+            var play = game.PlayedUsers?.FirstOrDefault(p => p.UserId == userId);
+            if (play == null || play.Minutes < 60) return false;
+
+            var filter = Builders<Game>.Filter.Eq(g => g.Id, gameId);
+
+            // Eğer daha önce oy verdiyse: güncelle
+            var existing = game.Ratings?.FirstOrDefault(r => r.UserId == userId);
+            if (existing != null)
+            {
+                var update = Builders<Game>.Update.Set("Ratings.$[elem].Score", score);
+                var arrayFilter = new List<ArrayFilterDefinition>
+        {
+            new BsonDocumentArrayFilterDefinition<BsonDocument>(new BsonDocument("elem.UserId", userId))
+        };
+                var options = new UpdateOptions { ArrayFilters = arrayFilter };
+
+                var result = await _games.UpdateOneAsync(filter, update, options);
+                return result.ModifiedCount > 0;
+            }
+
+            // İlk defa oy veriyorsa: ekle
+            var newRating = new UserRating { UserId = userId, Score = score };
+            var push = Builders<Game>.Update.Push(g => g.Ratings, newRating);
+            var res = await _games.UpdateOneAsync(filter, push);
+            return res.ModifiedCount > 0;
         }
     }
 }

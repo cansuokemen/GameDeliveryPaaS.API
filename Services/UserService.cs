@@ -6,10 +6,12 @@ namespace GameDeliveryPaaS.API.Services
     public class UserService
     {
         private readonly IMongoCollection<User> _users;
+        private readonly IMongoCollection<Game> _games;
 
         public UserService(IMongoDatabase database)
         {
             _users = database.GetCollection<User>("Users");
+            _games = database.GetCollection<Game>("Games");
         }
 
         public async Task<List<User>> GetAllAsync()
@@ -111,30 +113,57 @@ namespace GameDeliveryPaaS.API.Services
 
         public async Task<bool> AddOrUpdateRatingAsync(string userId, string gameId, int rating)
         {
+            // Kullanıcı ve oyun belgelerini bul
             var user = await _users.Find(u => u.Id == userId).FirstOrDefaultAsync();
             if (user == null) return false;
 
+            var game = await _games.Find(g => g.Id == gameId).FirstOrDefaultAsync();
+            if (game == null) return false;
+
             // Kullanıcının bu oyunu oynayıp oynamadığını kontrol et (en az 1 saat)
-            var playedGame = user.PlayedGames.FirstOrDefault(p => p.GameId == gameId);
+            var playedGame = game.PlayedUsers?.FirstOrDefault(p => p.UserId == userId);
             if (playedGame == null || playedGame.PlayTimeHours < 1)
                 return false;
 
-            // Daha önce puan verilmişse güncelle, yoksa ekle
-            var existingRating = user.RatedGames.FirstOrDefault(r => r.GameId == gameId);
-            if (existingRating != null)
+            // Kullanıcı belgesindeki derecelendirmeyi kontrol et ve güncelle
+            var existingUserRating = user.RatedGames?.FirstOrDefault(r => r.GameId == gameId);
+            if (existingUserRating != null)
             {
-                existingRating.Rating = rating;
+                existingUserRating.Rating = rating;
             }
             else
             {
+                if (user.RatedGames == null)
+                    user.RatedGames = new List<UserRating>();
+
                 user.RatedGames.Add(new UserRating { GameId = gameId, Rating = rating });
             }
 
-            var update = Builders<User>.Update
-                .Set(u => u.RatedGames, user.RatedGames);
+            // Oyun belgesindeki derecelendirmeyi kontrol et ve güncelle
+            var existingGameRating = game.Ratings?.FirstOrDefault(r => r.UserId == userId);
+            if (existingGameRating != null)
+            {
+                existingGameRating.Rating = rating;
+            }
+            else
+            {
+                if (game.Ratings == null)
+                    game.Ratings = new List<UserRating>();
 
-            var result = await _users.UpdateOneAsync(u => u.Id == userId, update);
-            return result.ModifiedCount > 0;
+                game.Ratings.Add(new UserRating { UserId = userId, Rating = rating });
+            }
+
+            // Kullanıcı belgesini güncelle
+            var userUpdate = Builders<User>.Update
+                .Set(u => u.RatedGames, user.RatedGames);
+            var userResult = await _users.UpdateOneAsync(u => u.Id == userId, userUpdate);
+
+            // Oyun belgesini güncelle
+            var gameUpdate = Builders<Game>.Update
+                .Set(g => g.Ratings, game.Ratings);
+            var gameResult = await _games.UpdateOneAsync(g => g.Id == gameId, gameUpdate);
+
+            return true;
         }
         public IMongoCollection<User> GetUserCollection()
         {

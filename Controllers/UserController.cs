@@ -1,6 +1,7 @@
 ﻿using GameDeliveryPaaS.API.Models;
 using GameDeliveryPaaS.API.Services;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace GameDeliveryPaaS.API.Controllers
@@ -55,16 +56,64 @@ namespace GameDeliveryPaaS.API.Controllers
         }
 
         [HttpPost("{userId}/play/{gameId}")]
-        public async Task<IActionResult> PlayGame(string userId, string gameId, [FromQuery] int hours)
+        public async Task<IActionResult> PlayGame(string userId, string gameId, [FromQuery] int minutes, [FromServices] IMongoDatabase database)
         {
-            var userUpdated = await _userService.AddPlayTimeAsync(userId, gameId, hours);
-            if (!userUpdated) return NotFound("User not found.");
+            var userCollection = database.GetCollection<User>("Users");
+            var gameCollection = database.GetCollection<Game>("Games");
 
-            var gameUpdated = await _gameService.AddGamePlayTimeAsync(gameId, hours);
-            if (!gameUpdated) return NotFound("Game not found.");
+            var user = await userCollection.Find(u => u.Id == userId).FirstOrDefaultAsync();
+            if (user == null) return NotFound("User not found.");
 
-            return Ok("Play time added successfully.");
+            if (!user.PlayedGameIds.Contains(gameId))
+            {
+                user.PlayedGameIds.Add(gameId);
+                await userCollection.ReplaceOneAsync(u => u.Id == userId, user);
+            }
+
+            var game = await gameCollection.Find(g => g.Id == gameId).FirstOrDefaultAsync();
+            if (game == null) return NotFound("Game not found.");
+
+            var existing = game.PlayedUsers?.FirstOrDefault(p => p.UserId == userId);
+            if (existing != null)
+            {
+                // Push yerine set-array kullan
+                var update = Builders<Game>.Update
+                    .Inc("PlayedUsers.$[elem].Minutes", minutes)
+                    .Set("PlayedUsers.$[elem].PlayTimeHours", (existing.Minutes + minutes) / 60);
+
+                var result = await gameCollection.UpdateOneAsync(
+                    g => g.Id == gameId,
+                    update,
+                    new UpdateOptions
+                    {
+                        ArrayFilters = new List<ArrayFilterDefinition>
+                        {
+                    new BsonDocumentArrayFilterDefinition<BsonDocument>(
+                        new BsonDocument("elem.UserId", userId))
+                        }
+                    });
+
+                return Ok("Play time updated.");
+            }
+
+            var newPlay = new UserGamePlay
+            {
+                UserId = userId,
+                GameId = gameId,
+                Minutes = minutes,
+                PlayTimeHours = minutes / 60
+            };
+
+            var pushResult = await gameCollection.UpdateOneAsync(
+                g => g.Id == gameId,
+                Builders<Game>.Update.Push(g => g.PlayedUsers, newPlay)
+            );
+
+            return Ok("Play time inserted.");
         }
+
+
+
         [HttpPost("{userId}/rate/{gameId}")]
         public async Task<IActionResult> RateGame(string userId, string gameId, [FromQuery] int rating)
         {
@@ -128,5 +177,54 @@ namespace GameDeliveryPaaS.API.Controllers
 
             return Ok(summary);
         }
+        [HttpGet("test-insert")]
+        public async Task<IActionResult> TestInsert([FromServices] IMongoDatabase database)
+        {
+            var games = database.GetCollection<Game>("Games");
+
+            var testGame = new Game
+            {
+                Name = "TEST GAME",
+                Genre = "TEST",
+                PlayedUsers = new List<UserGamePlay>
+        {
+            new UserGamePlay
+            {
+                UserId = "u123",
+                GameId = "g123",
+                Minutes = 90,
+                PlayTimeHours = 1
+            }
+        }
+            };
+
+            await games.InsertOneAsync(testGame);
+
+            return Ok("Inserted test game.");
+        }
+        [HttpGet("insert-test-play")]
+        public async Task<IActionResult> InsertTestPlay([FromServices] IMongoDatabase database)
+        {
+            var gameCollection = database.GetCollection<Game>("Games");
+            var gameId = "6812b77565102624c9a60605"; // Elden Ring
+            var userId = "6812b75c65102624c9a60604"; // Cansu
+
+            var game = await gameCollection.Find(g => g.Id == gameId).FirstOrDefaultAsync();
+            if (game == null) return NotFound("Game not found");
+
+            game.PlayedUsers ??= new List<UserGamePlay>();
+            game.PlayedUsers.Add(new UserGamePlay
+            {
+                GameId = gameId,
+                UserId = userId,
+                Minutes = 90,
+                PlayTimeHours = 1
+            });
+
+            await gameCollection.ReplaceOneAsync(g => g.Id == gameId, game);
+
+            return Ok("Test play data inserted.");
+        }
+
     }
 }

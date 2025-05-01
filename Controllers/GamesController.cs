@@ -113,5 +113,14 @@ namespace GameDeliveryPaaS.API.Controllers
             var games = await _gameService.GetFullGamesAsync();
             return Ok(games);
         }
+        [HttpPost("{id}/rate")]
+        public async Task<IActionResult> RateGame(string id, [FromQuery] string userId, [FromQuery] int score)
+        {
+            var success = await _gameService.RateGameAsync(id, userId, score);
+            if (!success)
+                return BadRequest("Rating failed. Make sure the user has played at least 60 minutes and score is 1–5.");
+
+            return Ok("Rating submitted successfully.");
+        }
     }
 }
