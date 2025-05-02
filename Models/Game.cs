@@ -27,6 +27,8 @@ namespace GameDeliveryPaaS.API.Models
         [BsonElement("Img")]
         public string? Img { get; set; }
 
+        [BsonElement("Description")]
+        public string? Description { get; set; }
 
     }
 }

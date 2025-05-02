@@ -195,6 +195,7 @@ namespace GameDeliveryPaaS.API.Controllers
             await _userService.AddAsync(newUser);
             return CreatedAtAction(nameof(GetById), new { id = newUser.Id }, newUser);
         }
+
         [HttpGet("login")]
         public async Task<IActionResult> Login([FromQuery] string username)
         {

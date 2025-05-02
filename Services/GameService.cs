@@ -125,7 +125,8 @@ namespace GameDeliveryPaaS.API.Services
                 TotalPlayTime = game.TotalPlayTime,
                 Ratings = game.Ratings,
                 Comments = game.Comments,
-                PlayedUsers = game.PlayedUsers
+                PlayedUsers = game.PlayedUsers,
+                Description = game.Description
             }).ToList();
         }
         public async Task<bool> RateGameAsync(string gameId, string userId, int score)
@@ -177,7 +178,8 @@ namespace GameDeliveryPaaS.API.Services
                 Img = game.Img, // ✅ Burası önemli
                 Ratings = game.Ratings,
                 Comments = game.Comments,
-                PlayedUsers = game.PlayedUsers
+                PlayedUsers = game.PlayedUsers,
+                Description = game.Description
             };
         }
         public async Task<Game?> GetByIdAsync(string id)
