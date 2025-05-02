@@ -12,7 +12,7 @@ namespace GameDeliveryPaaS.API.Models
         public string Email { get; set; } = null!;
         public bool CanComment { get; set; }
         public bool CanRate { get; set; }
-
+        public string AvatarUrl { get; set; } = null!;
         public List<string> PlayedGameIds { get; set; } = new();
         public List<UserGamePlay> PlayedGames { get; set; } = new();
         public List<UserRating> RatedGames { get; set; } = new();
