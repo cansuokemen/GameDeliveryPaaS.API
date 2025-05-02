@@ -24,6 +24,10 @@ namespace GameDeliveryPaaS.API.Controllers
             {
                 return BadRequest("Game data is null");
             }
+            if (newGame.Description == null)
+            {
+                newGame.Description = string.Empty;
+            }
 
             await _gameService.AddGameAsync(newGame);
             return CreatedAtAction(nameof(CreateGame), new { id = newGame.Id }, newGame);
