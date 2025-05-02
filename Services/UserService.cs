@@ -154,6 +154,31 @@ namespace GameDeliveryPaaS.API.Services
             var result = await _users.ReplaceOneAsync(u => u.Id == userId, user);
             return result.ModifiedCount > 0;
         }
+        public async Task<bool> AddPlayTimeMinutesAsync(string userId, string gameId, int minutes)
+        {
+            var user = await _users.Find(u => u.Id == userId).FirstOrDefaultAsync();
+            if (user == null) return false;
+
+            var existingPlay = user.PlayedGames.FirstOrDefault(p => p.GameId == gameId);
+            if (existingPlay != null)
+            {
+                existingPlay.Minutes += minutes;
+                existingPlay.PlayTimeHours = existingPlay.Minutes / 60;
+            }
+            else
+            {
+                user.PlayedGames.Add(new UserGamePlay
+                {
+                    GameId = gameId,
+                    UserId = userId,
+                    Minutes = minutes,
+                    PlayTimeHours = minutes / 60
+                });
+            }
+
+            var result = await _users.ReplaceOneAsync(u => u.Id == userId, user);
+            return result.ModifiedCount > 0;
+        }
 
         public async Task<bool> AddOrUpdateRatingAsync(string userId, string gameId, int rating)
         {

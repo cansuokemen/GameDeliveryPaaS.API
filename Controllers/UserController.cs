@@ -105,22 +105,41 @@ namespace GameDeliveryPaaS.API.Controllers
             var user = await userCollection.Find(u => u.Id == userId).FirstOrDefaultAsync();
             if (user == null) return NotFound("User not found.");
 
-            if (!user.PlayedGameIds.Contains(gameId))
-            {
-                user.PlayedGameIds.Add(gameId);
-                await userCollection.ReplaceOneAsync(u => u.Id == userId, user);
-            }
-
             var game = await gameCollection.Find(g => g.Id == gameId).FirstOrDefaultAsync();
             if (game == null) return NotFound("Game not found.");
 
-            var existing = game.PlayedUsers?.FirstOrDefault(p => p.UserId == userId);
-            if (existing != null)
+            // Kullanıcının PlayedGameIds listesine ekle (varsa atla)
+            if (!user.PlayedGameIds.Contains(gameId))
+                user.PlayedGameIds.Add(gameId);
+
+            // Kullanıcının PlayedGames listesinde bu oyun varsa güncelle
+            var existingUserPlay = user.PlayedGames.FirstOrDefault(p => p.GameId == gameId);
+            if (existingUserPlay != null)
             {
-                // Push yerine set-array kullan
+                existingUserPlay.Minutes += minutes;
+                existingUserPlay.PlayTimeHours = existingUserPlay.Minutes / 60;
+            }
+            else
+            {
+                user.PlayedGames.Add(new UserGamePlay
+                {
+                    GameId = gameId,
+                    UserId = userId,
+                    Minutes = minutes,
+                    PlayTimeHours = minutes / 60
+                });
+            }
+
+            await _userService.AddPlayTimeMinutesAsync(userId, gameId, minutes);
+
+
+            // Game tarafındaki PlayedUsers güncellemesi
+            var existingGamePlay = game.PlayedUsers?.FirstOrDefault(p => p.UserId == userId);
+            if (existingGamePlay != null)
+            {
                 var update = Builders<Game>.Update
                     .Inc("PlayedUsers.$[elem].Minutes", minutes)
-                    .Set("PlayedUsers.$[elem].PlayTimeHours", (existing.Minutes + minutes) / 60);
+                    .Set("PlayedUsers.$[elem].PlayTimeHours", (existingGamePlay.Minutes + minutes) / 60);
 
                 var result = await gameCollection.UpdateOneAsync(
                     g => g.Id == gameId,
@@ -130,14 +149,15 @@ namespace GameDeliveryPaaS.API.Controllers
                         ArrayFilters = new List<ArrayFilterDefinition>
                         {
                     new BsonDocumentArrayFilterDefinition<BsonDocument>(
-                        new BsonDocument("elem.UserId", userId))
+                        new BsonDocument("elem.UserId", new ObjectId(userId)))
                         }
                     });
 
                 return Ok("Play time updated.");
             }
 
-            var newPlay = new UserGamePlay
+            // Eğer Game.PlayedUsers içinde kayıt yoksa yeni bir tane ekle
+            var newGamePlay = new UserGamePlay
             {
                 UserId = userId,
                 GameId = gameId,
@@ -145,14 +165,13 @@ namespace GameDeliveryPaaS.API.Controllers
                 PlayTimeHours = minutes / 60
             };
 
-            var pushResult = await gameCollection.UpdateOneAsync(
+            await gameCollection.UpdateOneAsync(
                 g => g.Id == gameId,
-                Builders<Game>.Update.Push(g => g.PlayedUsers, newPlay)
+                Builders<Game>.Update.Push(g => g.PlayedUsers, newGamePlay)
             );
 
             return Ok("Play time inserted.");
         }
-
 
 
         [HttpPost("{userId}/rate/{gameId}")]
@@ -244,29 +263,7 @@ namespace GameDeliveryPaaS.API.Controllers
 
             return Ok("Inserted test game.");
         }
-        [HttpGet("insert-test-play")]
-        public async Task<IActionResult> InsertTestPlay([FromServices] IMongoDatabase database)
-        {
-            var gameCollection = database.GetCollection<Game>("Games");
-            var gameId = "6812b77565102624c9a60605"; // Elden Ring
-            var userId = "6812b75c65102624c9a60604"; // Cansu
-
-            var game = await gameCollection.Find(g => g.Id == gameId).FirstOrDefaultAsync();
-            if (game == null) return NotFound("Game not found");
-
-            game.PlayedUsers ??= new List<UserGamePlay>();
-            game.PlayedUsers.Add(new UserGamePlay
-            {
-                GameId = gameId,
-                UserId = userId,
-                Minutes = 90,
-                PlayTimeHours = 1
-            });
-
-            await gameCollection.ReplaceOneAsync(g => g.Id == gameId, game);
-
-            return Ok("Test play data inserted.");
-        }
+       
 
     }
 }
